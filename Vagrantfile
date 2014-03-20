@@ -4,6 +4,19 @@
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
+$install_devstack = <<SCRIPT
+	echo start to install devstack...
+	echo check if devstack has been installed
+	if [ -e devstack ]
+	then 
+		echo already installed!
+	else
+		git clone http://github.com/openstack-dev/devstack.git
+		cd devstack; ./stack.sh
+		echo finish to install devstack!
+	fi
+SCRIPT
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
@@ -123,15 +136,21 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 		config.vm.network :private_network, ip: "192.168.1.2"
 		config.vm.network :forwarded_port, guest: 8080, host: 8080, auto_correct: true
 		config.vm.provision :chef_solo do |chef|
-			chef.run_list = ["jenkins::master"]
+			chef.run_list = ["jenkins::master", "git"]
 			#and install "Git Plugin", "Gitlab Plugin"
 		end
+		config.vm.provision :shell, inline: $install_devstack
 	end
 
 	config.vm.define :docker do |docker|
 		config.vm.network :private_network, ip: "192.168.1.3"
 		config.vm.provision :chef_solo do |chef|
 			chef.run_list = ["docker"]
+			chef.json = {
+				docker: {
+					group: "vagrant"
+			}
+			}
 		end
 	end
 	
